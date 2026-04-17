@@ -11,8 +11,8 @@ semantics, and constraint-based type inference.
 ## Quick Start
 
 ```bash
-cd src
-python main.py
+$ cd src
+$ python main.py
 ```
 
 The interpreter runs a built-in test suite that exercises both the evaluator
@@ -38,7 +38,6 @@ result = evaluate_expr(ast=ast)           # 7
 or 
 
 ```bash
-$ cd ./lambda-calculus-interpreter
 $ ./lamb "let add = fn x => fn y => x + y in add 3 4"
 7 : int
 ```
