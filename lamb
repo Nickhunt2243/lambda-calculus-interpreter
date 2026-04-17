@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+
+from interpreter.tokenizer import tokenize
+from interpreter.parser import build_ast
+from interpreter.type_inferencer import type_inference
+from interpreter.evaluate import evaluate_expr
+from interpreter.exceptions import LambError
+
+if len(sys.argv) != 2:
+    print("Usage: lamb \"<expression>\"")
+    sys.exit(1)
+
+try:
+    tokens = tokenize(sys.argv[1])
+    ast, _ = build_ast(tokens)
+    inferred_type = type_inference(ast)
+    result = evaluate_expr(ast)
+    print(f"{result} : {inferred_type}")
+except LambError as e:
+    print(f"Error: {e}")
+    sys.exit(1)
