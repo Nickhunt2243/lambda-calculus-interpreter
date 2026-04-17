@@ -115,26 +115,6 @@ branches must be present and both must produce values of the same type.
 The type inferencer enforces this: `if true then 1 else false` is a type
 error because the branches have incompatible types.
 
-**Recursion via self-application**
-
-```
-let factorial =
-  fn self => fn n =>
-    if n == 0 then 1 else n * (self self (n - 1))
-in factorial factorial 5
-```
-
-Evaluates to `120`. The language does not have built-in recursion. Recursion
-is instead expressed through self-application — a function receives itself
-as an argument and calls itself through that parameter. This pattern is the
-basis of the Y combinator and demonstrates that recursion is not a primitive
-concept; it can be derived from the core calculus.
-
-Note: self-application in this form is valid at the evaluator level but will
-be rejected by the type inferencer. See the Type Inferencer section for the
-explanation. I have later plans to add a letrec keyword to allow for explicit
-recursive functions to be defined.
-
 ---
 
 ## Architecture
@@ -357,6 +337,74 @@ are demonstrated throughout the example programs. Hindley-Milner type
 inference is demonstrated by the constraint generation, unification, and
 substitution pipeline. The occurs check is demonstrated by the rejection of
 self-application.
+
+---
+
+## Known Limitations and Future Improvements
+
+**Recursion via self-application**
+
+```
+let factorial =
+  fn self => fn n =>
+    if n == 0 then 1 else n * (self self (n - 1))
+in factorial factorial 5
+```
+
+Evaluates to `120`. The language does not have built-in recursion. Recursion
+is instead expressed through self-application — a function receives itself
+as an argument and calls itself through that parameter.
+
+Note: self-application in this form is valid at the evaluator level but will
+be rejected by the type inferencer. See the Type Inferencer section for the
+explanation. 
+
+The planned extension is a letrec keyword that adds the binding to the environment 
+before evaluating the value expression, allowing the function to reference itself. 
+This requires a straightforward change to the evaluator and a fresh type variable 
+approach in the type inferencer.
+
+**Let-polymorphism**
+
+```
+let id = fn x => x in if id true then id 5 else id 1 
+```
+
+In the current type system, id is assigned a single type at its binding site. The first use id true pins 
+'a = bool, which causes id 5 to fail unification. Let-polymorphism generalizes the type at let bindings — 
+each use of id gets a fresh instantiation of 'a -> 'a — making the expression well-typed. This is the 
+missing piece between the current constraint-based system and full Algorithm W.
+
+**Pattern matching**
+
+```
+let result = 5 in
+match result with
+| 0 => false
+| _ => true
+```
+
+Evaluates to `true`. In my college course (mentioned below), we implemented pattern matching, but I initially
+decided to skip it to simplify the implementation, and add it after. The parser and evaluator would need to support a 
+new expression form and pattern binding semantics, but for completeness I will be adding this eventually.
+
+**Better Error Messaging**
+
+Current:
+
+```LambTypeError: Failed to unify types: int <> bool```
+
+Improved:
+
+```
+LambTypeError at position 23-27:
+  Type mismatch in arithmetic expression
+  Expected: int
+  Got:      bool
+  
+  let x = 5 in true + x
+                ^^^^
+```
 
 ---
 
