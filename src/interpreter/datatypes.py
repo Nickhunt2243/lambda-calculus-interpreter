@@ -28,6 +28,7 @@ class BooleanLiteral:
 class Keyword(Enum):
     FN = "fn"
     LET = "let"
+    LETREC = "letrec"
     IN = "in"
     IF = "if"
     THEN = "then"
@@ -103,6 +104,15 @@ class LetExpr:
 
     def __str__(self):
         return f"let {self.identifier} = {self.value} in {self.body_expr}"
+
+@dataclass(frozen=True)
+class LetRecExpr:
+    identifier: Identifier
+    value: Expr
+    body_expr: Expr
+
+    def __str__(self):
+        return f"letrec {self.identifier} = {self.value} in {self.body_expr}"
 
 
 @dataclass(frozen=True)
@@ -227,7 +237,7 @@ class PrioritizedExpr:
         return f"( {self.expr} )"
 
 
-Expr: dataclass = LetExpr | IfExpr | FuncDeclExpr | CompExpr
+Expr: dataclass = LetExpr | LetRecExpr | IfExpr | FuncDeclExpr | CompExpr
 Atom: dataclass = Identifier | IntegerLiteral | BooleanLiteral | PrioritizedExpr
 Value = bool | int | Closure
 

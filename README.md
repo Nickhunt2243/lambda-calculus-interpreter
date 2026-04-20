@@ -239,6 +239,14 @@ the closure, `n` would not necessarily be in scope. Lexical scoping prevents
 this class of error by always evaluating a function body in an extension of
 its definition environment.
 
+### related to letrec usage
+
+Prior to evaluating the value expression, `letrec` seeds the local environment with a 
+placeholder for the binding name. The value expression is then evaluated in that environment, 
+producing a closure that captures it. The placeholder is patched with that closure before 
+the body is evaluated — ensuring that when the function recurses and looks up its own name, 
+it finds itself rather than an unbound variable.
+
 ---
 
 ## Type Inferencer
@@ -293,6 +301,24 @@ would create an infinite type — for example, `'a = 'a -> int` — which has no
 finite representation. This check, called the occurs check, raises a
 `LambTypeError` for self-application expressions such as `fn x => x x`.
 
+### Recursive Functions via `letrec`
+
+The language now supports recursive function definitions through the `letrec` keyword. 
+Standard `let` bindings cannot express recursion because the binding name is not in 
+scope when the value expression is evaluated — a function cannot reference itself during 
+its own definition.
+
+`letrec` solves this by introducing a fresh type variable for the binding name and adding 
+it to the type environment before walking the value expression. The recursive self-reference 
+unifies against that type variable during constraint generation. Unification then resolves 
+the variable to the function's concrete type without triggering the occurs check — which 
+would fire if the type variable appeared recursively inside its own resolved type rather 
+than as a resolvable constraint.
+
+`letrec factorial = fn n => if n == 0 then 1 else n * (factorial (n - 1)) in factorial 5`
+
+Evaluates to `120`.
+
 ### Relationship to the evaluator
 
 The type inferencer and the evaluator represent a clean separation between
@@ -320,6 +346,7 @@ The type inferencer catches the following before any evaluation occurs:
 - Applying a non-function value as a function: `let x = 5 in x 3`
 - Passing a wrong-typed argument: `let f = fn x => x + 1 in f true`
 - Self-application: `fn x => x x`
+- Stack Overflow: `let f = fn x => x 5 in f 2`
 
 ---
 
@@ -340,28 +367,6 @@ self-application.
 ---
 
 ## Known Limitations and Future Improvements
-
-**Recursion via self-application**
-
-```
-let factorial =
-  fn self => fn n =>
-    if n == 0 then 1 else n * (self self (n - 1))
-in factorial factorial 5
-```
-
-Evaluates to `120`. The language does not have built-in recursion. Recursion
-is instead expressed through self-application — a function receives itself
-as an argument and calls itself through that parameter.
-
-Note: self-application in this form is valid at the evaluator level but will
-be rejected by the type inferencer. See the Type Inferencer section for the
-explanation. 
-
-The planned extension is a letrec keyword that adds the binding to the environment 
-before evaluating the value expression, allowing the function to reference itself. 
-This requires a straightforward change to the evaluator and a fresh type variable 
-approach in the type inferencer.
 
 **Let-polymorphism**
 

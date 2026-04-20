@@ -1,5 +1,6 @@
 from interpreter.predicates import (
- is_bool, is_closure, is_int, is_identifier, is_func_decl, is_let, is_prioritized_expr, is_comp_expr, is_if,
+    is_bool, is_closure, is_int, is_identifier, is_func_decl, is_let, is_prioritized_expr, is_comp_expr, is_if,
+    is_let_rec,
 )
 from interpreter.datatypes import Value, Expr, LetExpr, Closure, FuncDeclExpr, CompExpr, ChainedCompExpr, \
     BooleanOperations, AddExpr, ChainedAddExpr, AdditiveOperations, MulExpr, ChainedMulExpr, \
@@ -11,18 +12,23 @@ from interpreter.exceptions import LambRuntimeError, LambInternalError
 def evaluate_expr(ast: Expr, stack: dict[str, Value] | None = None) -> Value:
     if stack is None:
         stack = {}
+    try:
 
-    if is_func_decl(ast):
-        return evaluate_func_decl(ast=ast, stack=stack)
-    if is_let(ast):
-        return evaluate_let_expr(ast=ast, stack=stack)
-    if is_if(ast):
-        return evaluate_if_expr(ast=ast, stack=stack)
-    if is_comp_expr(ast):
-        return evaluate_comp_expr(ast=ast, stack=stack)
+        if is_func_decl(ast):
+            return evaluate_func_decl(ast=ast, stack=stack)
+        if is_let(ast):
+            return evaluate_let_expr(ast=ast, stack=stack)
+        if is_let_rec(ast):
+            return evaluate_let_rec_expr(ast=ast, stack=stack)
+        if is_if(ast):
+            return evaluate_if_expr(ast=ast, stack=stack)
+        if is_comp_expr(ast):
+            return evaluate_comp_expr(ast=ast, stack=stack)
 
-    error_msg = f"Unexpected expression during runtime calculation: {type(ast)}"
-    raise LambInternalError(error_msg)
+        error_msg = f"Unexpected expression during runtime calculation: {type(ast)}"
+        raise LambInternalError(error_msg)
+    except RecursionError:
+        raise LambRuntimeError("maximum recursion depth exceeded")
 
 
 def evaluate_let_expr(ast: LetExpr, stack: dict[str, Value]) -> Value:
@@ -30,6 +36,13 @@ def evaluate_let_expr(ast: LetExpr, stack: dict[str, Value]) -> Value:
     local_stack[ast.identifier.name] = evaluate_expr(ast=ast.value, stack=stack)
     return evaluate_expr(ast=ast.body_expr, stack=local_stack)
 
+
+def evaluate_let_rec_expr(ast: LetExpr, stack: dict[str, Value]) -> Value:
+    local_stack: dict[str, Value] = stack.copy()
+    # Setting dummy value that will be evaluated when the function closure has been created.
+    local_stack[ast.identifier.name] = None
+    local_stack[ast.identifier.name] = evaluate_expr(ast=ast.value, stack=local_stack)
+    return evaluate_expr(ast=ast.body_expr, stack=local_stack)
 
 
 def evaluate_if_expr(ast: IfExpr, stack: dict[str, Value]) -> Value:

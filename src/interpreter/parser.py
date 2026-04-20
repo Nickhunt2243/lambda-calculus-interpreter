@@ -5,12 +5,13 @@ from interpreter.predicates import (
 from interpreter.exceptions import LambSemanticError
 from interpreter.datatypes import Token, Keyword, Arrow, LParen, EqualSign, BooleanOperations, AdditiveOperations, \
     MultiplicativeOperations, IntegerLiteral, BooleanLiteral, Identifier, Expr, FuncDeclExpr, LetExpr, IfExpr, CompExpr, \
-    ChainedCompExpr, ChainedAddExpr, AddExpr, MulExpr, ChainedMulExpr, AppExpr, ChainedAppExpr, Atom, PrioritizedExpr
-
+    ChainedCompExpr, ChainedAddExpr, AddExpr, MulExpr, ChainedMulExpr, AppExpr, ChainedAppExpr, Atom, PrioritizedExpr, \
+    LetRecExpr
 
 INVALID_EXPR_ERROR = """
 Invalid expression. Expected expression syntax:
 <expr>     ::= fn <identifier> => <expr>
+            | let rec <identifier> = <expr> in <expr>
             | let <identifier> = <expr> in <expr>  
             | if <expr> then <expr> else <expr>
             | <comp_expr>
@@ -26,6 +27,8 @@ def build_expr(tokens: list[Token], idx: int) -> (Expr, int):
         return build_function_decl(tokens, idx)
     elif tokens[idx] == Keyword.LET:
         return build_let(tokens, idx)
+    elif tokens[idx] == Keyword.LETREC:
+        return build_let_rec(tokens, idx)
     elif tokens[idx] == Keyword.IF:
         return build_if(tokens, idx)
     elif (
@@ -75,6 +78,30 @@ def build_let(tokens: list[Token], idx: int) -> (LetExpr, int):
 
     body_expr, next_idx = build_expr(tokens=tokens, idx=next_idx + 1)
     return LetExpr(
+        identifier=tokens[idx+1],
+        value=value,
+        body_expr=body_expr,
+    ), next_idx
+
+
+def build_let_rec(tokens: list[Token], idx: int) -> (LetExpr, int):
+    if idx + 3 >= len(tokens):
+       raise LambSemanticError(INVALID_LET_EXPR_ERROR)
+    if not isinstance(tokens[idx + 1], Identifier):
+        raise LambSemanticError(f"Expected identifier, received: {tokens[idx+1]}.")
+    if not isinstance(tokens[idx + 2], EqualSign):
+        raise LambSemanticError(f"Expected =, received: {tokens[idx+2]}.")
+
+    value, next_idx = build_expr(tokens=tokens, idx=idx + 3)
+
+    if next_idx + 1 >= len(tokens):
+        raise LambSemanticError(INVALID_LET_EXPR_ERROR)
+
+    if tokens[next_idx] != Keyword.IN:
+        raise LambSemanticError(f"Expected in, received: {tokens[next_idx]}.")
+
+    body_expr, next_idx = build_expr(tokens=tokens, idx=next_idx + 1)
+    return LetRecExpr(
         identifier=tokens[idx+1],
         value=value,
         body_expr=body_expr,

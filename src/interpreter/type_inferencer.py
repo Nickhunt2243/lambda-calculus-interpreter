@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 import itertools
 import string
-from typing import Any, Generator
+from typing import Any, Generator, TypeVar
 
 from interpreter.predicates import (
     is_identifier, is_bool, is_int, is_prioritized_expr, is_func_decl, is_let, is_if, is_comp_expr, is_int_type,
-    is_bool_type, is_func_type, is_type_variable
+    is_bool_type, is_func_type, is_type_variable, is_let_rec
 )
 from interpreter.datatypes import (
     Expr,
@@ -64,6 +64,8 @@ def infer_expr_type(ast: Expr, env: dict[str, Type], inferred_type: list[list[Ty
         return infer_func_decl_type(ast=ast, env=env, inferred_type=inferred_type, type_var_generator=type_var_generator)
     if is_let(ast):
         return infer_let_type(ast=ast, env=env, inferred_type=inferred_type, type_var_generator=type_var_generator)
+    if is_let_rec(ast):
+        return infer_let_rec_type(ast=ast, env=env, inferred_type=inferred_type, type_var_generator=type_var_generator)
     if is_if(ast):
         return infer_if_type(ast=ast, env=env, inferred_type=inferred_type, type_var_generator=type_var_generator)
     if is_comp_expr(ast):
@@ -90,6 +92,15 @@ def infer_let_type(ast: LetExpr, env: dict[str, Type], inferred_type: list[list[
     identifier_type = infer_expr_type(ast.value, env=env, inferred_type=inferred_type, type_var_generator=type_var_generator)
     local_env[ast.identifier.name] = identifier_type
 
+    return infer_expr_type(ast.body_expr, env=local_env, inferred_type=inferred_type, type_var_generator=type_var_generator)
+
+
+def infer_let_rec_type(ast: LetExpr, env: dict[str, Type], inferred_type: list[list[Type]], type_var_generator: TypeVariableGenerator) -> Type:
+    rec_type_var: TypeVariable = type_var_generator.generate()
+    local_env = env.copy()
+    local_env[ast.identifier.name] = rec_type_var
+    identifier_type = infer_expr_type(ast.value, env=local_env, inferred_type=inferred_type, type_var_generator=type_var_generator)
+    inferred_type.append([rec_type_var, identifier_type])
     return infer_expr_type(ast.body_expr, env=local_env, inferred_type=inferred_type, type_var_generator=type_var_generator)
 
 

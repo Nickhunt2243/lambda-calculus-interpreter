@@ -6,6 +6,7 @@ The lambda calculus language described in README.md is defined below.
 <start>     ::= <expr> eof
 
 <expr>      ::= fn <identifier> => <expr>
+             | let rec <identifier> = <expr> in <expr>
              | let <identifier> = <expr> in <expr>
              | if <expr> then <expr> else <expr>
              | <comp_expr>
@@ -25,7 +26,7 @@ The lambda calculus language described in README.md is defined below.
 
 <identifier> ::= [a-zA-Z][a-zA-Z0-9_-]*
 
-<integer>    ::= [0-9]+
+<integer>    ::= (-)?[0-9]+
 ```
 
 ### Operator precedence

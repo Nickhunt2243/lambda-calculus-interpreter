@@ -1,7 +1,8 @@
 from typing import Any
 
 from interpreter.datatypes import IntegerLiteral, BooleanLiteral, Closure, Identifier, LParen, PrioritizedExpr, \
-    FuncDeclExpr, LetExpr, IfExpr, CompExpr, AddExpr, MulExpr, AppExpr, Atom, TypeVariable, FuncType, IntType, BoolType
+    FuncDeclExpr, LetExpr, IfExpr, CompExpr, AddExpr, MulExpr, AppExpr, Atom, TypeVariable, FuncType, IntType, BoolType, \
+    LetRecExpr, Keyword, MultiplicativeOperations, AdditiveOperations, BooleanOperations, EqualSign, Arrow
 
 
 # Predicates
@@ -37,6 +38,10 @@ def is_func_decl(x: Any):
 
 def is_let(x: Any):
     return isinstance(x, LetExpr)
+
+
+def is_let_rec(x: Any):
+    return isinstance(x, LetRecExpr)
 
 
 def is_if(x: Any):
@@ -77,3 +82,24 @@ def is_int_type(x: Any):
 
 def is_bool_type(x: Any):
     return isinstance(x, BoolType)
+
+
+def is_keyword(x: Any):
+    return isinstance(x, Keyword)
+
+
+def is_operation(x: Any):
+    return (
+        isinstance(x, MultiplicativeOperations) or
+        isinstance(x, AdditiveOperations) or
+        isinstance(x, BooleanOperations)
+    )
+
+
+def is_equal(x: Any):
+    return isinstance(x, EqualSign)
+
+
+def is_arrow(x: Any):
+    return isinstance(x, Arrow)
+

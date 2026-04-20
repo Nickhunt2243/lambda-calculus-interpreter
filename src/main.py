@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from interpreter.datatypes import Value
 from interpreter.evaluate import evaluate_expr
-from interpreter.exceptions import LambError, LambTypeError
+from interpreter.exceptions import LambError, LambTypeError, LambRuntimeError
 from interpreter.parser import build_ast
 from interpreter.tokenizer import tokenize
 from interpreter.type_inferencer import type_inference
@@ -18,7 +18,7 @@ def lamb(lamb_calc_expr: str) -> Value:
         result = evaluate_expr(ast=ast)
         return result, return_type, None
     except LambError as error:
-        return None, None, type(error)
+        return None, None, error
 
 @dataclass
 class LambTest:
@@ -29,17 +29,19 @@ class LambTest:
 
     def test(self):
         result_actual, return_type, raised_error = lamb(lamb_calc_expr=self.lamb_calc)
-        passed = self.result_expected == result_actual and self.error_expected == raised_error
+        raised_error_type = type(raised_error) if raised_error else None
+        passed = self.result_expected == result_actual and self.error_expected == raised_error_type
         prefix = "[O]" if passed else "[X]"
         test_details = []
 
         if self.result_expected is not None or return_type is not None:
             test_details.append(f"Result<{return_type}>[e: {self.result_expected}, a: {result_actual}]")
-        elif self.error_expected is not None or raised_error is not None:
+        if self.error_expected is not None or raised_error is not None:
             expected_error_name = self.error_expected.name if self.error_expected else "None"
-            raised_error_name = raised_error.name if raised_error else "None"
-            test_details.append(f"Error[e: {expected_error_name}, a: {raised_error_name}]")
-        test_detail_str = '\n\t'.join(test_details)
+            raised_error_name = type(raised_error).name if raised_error else "None"
+            raised_error_str = str(raised_error) if raised_error else "None"
+            test_details.append(f"Error[e: {expected_error_name}, a: {raised_error_name}<{raised_error_str}>]")
+        test_detail_str = '\n\t' + '\n\t'.join(test_details) if len(test_details) > 1 else test_details
         test_result = f"{prefix} {self.name} => {test_detail_str}"
         print(test_result)
 
@@ -48,7 +50,7 @@ def main():
         # --- PASSING TESTS ---
 
         # Basic literals
-        LambTest(name="Integer literal", lamb_calc="5", result_expected=5),
+        LambTest(name="Integer literal", lamb_calc="-5", result_expected=-5),
         LambTest(name="Boolean literal true", lamb_calc="true", result_expected=True),
         LambTest(name="Boolean literal false", lamb_calc="false", result_expected=False),
 
@@ -94,6 +96,19 @@ def main():
         LambTest(name="Nested function calls",
                  lamb_calc="let x = 3 in let func = fn y => fn z => (z + y + 3) in func (x + 3) 4", result_expected=13),
 
+        # Recursive tests
+        LambTest(name="Basic Factorial",
+                 lamb_calc="letrec factorial = fn n => if n == 0 then 1 else n * (factorial (n - 1)) in factorial 5",
+                 result_expected=120),
+        LambTest(name="Power Function",
+                 lamb_calc="letrec sum = fn n => if n == 0 then 0 else n + (sum (n - 1)) in sum 10",
+                 result_expected=55),
+        LambTest(name="Fibonacci",
+                 lamb_calc="letrec fib = fn n => if n <= 1 then n else (fib (n - 1)) + (fib (n - 2)) in fib 10",
+                 result_expected=55),
+        LambTest(name="Recursive with negatives",
+                 lamb_calc="letrec f = fn n => if n == 0 then 0 else n + f (n - -1) in f (-5)",
+                 result_expected=-15),
         # --- FAILING TESTS ---
 
         # Arithmetic type errors
@@ -133,6 +148,11 @@ def main():
         # Function used with wrong type after being correctly typed
         LambTest(name="Polymorphic misuse", lamb_calc="let f = fn x => x + 1 in if f 3 == 4 then f true else 2",
                  error_expected=LambTypeError),
+
+        LambTest(name="Stack Overflow / Infinite Recursion",
+                 lamb_calc="letrec f = fn n => if n == 0 then 0 else n + f (n - -1) in f (5)",
+                 error_expected=LambRuntimeError),
+
     ]
 
     for test in tests:

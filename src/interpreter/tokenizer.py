@@ -15,7 +15,8 @@ from interpreter.datatypes import (
     MultiplicativeOperations
 )
 from interpreter.exceptions import LambSyntaxError
-from interpreter.predicates import is_white_space
+from interpreter.predicates import is_white_space, is_let_rec, is_left_paren, is_keyword, is_operation, is_equal, \
+    is_arrow
 
 
 def validate_keyword(raw_string: str, start_idx: int, keyword: str):
@@ -36,6 +37,17 @@ def validate_symbol(raw_string: str, start_idx: int, symbol: str):
         return raw_string[start_idx:start_idx + len(symbol)] == symbol, start_idx + len(symbol)
 
     return False, len(raw_string)
+
+
+def expecting_numeric(current_token: Token | None):
+    return (
+            current_token is None or
+            is_keyword(current_token) or
+            is_operation(current_token) or
+            is_equal(current_token) or
+            is_arrow(current_token) or
+            is_left_paren(current_token)
+    )
 
 
 def tokenize(raw_string: str):
@@ -105,6 +117,11 @@ def tokenize(raw_string: str):
             idx += 1
             continue
         elif c == "l":
+            valid_letrec, next_idx = validate_keyword(raw_string=raw_string, start_idx=idx, keyword="letrec")
+            if valid_letrec:
+                tokens.append(Keyword.LETREC)
+                idx = next_idx
+                continue
             valid_let, next_idx = validate_keyword(raw_string=raw_string, start_idx=idx, keyword="let")
             if valid_let:
                 tokens.append(Keyword.LET)
@@ -151,9 +168,19 @@ def tokenize(raw_string: str):
             idx += 1
             continue
         elif c == "-":
-            tokens.append(AdditiveOperations.SUB)
-            idx += 1
-            continue
+            if expecting_numeric(tokens[-1] if len(tokens) else None):
+                idx += 1
+                total_number = f"-{raw_string[idx]}"
+                idx += 1
+                while idx < max_idx and "0" <= raw_string[idx] <= "9":
+                    total_number += raw_string[idx]
+                    idx += 1
+                tokens.append(IntegerLiteral(int(total_number)))
+                continue
+            else:
+                tokens.append(AdditiveOperations.SUB)
+                idx += 1
+                continue
         elif c == "*":
             tokens.append(MultiplicativeOperations.MUL)
             idx += 1
