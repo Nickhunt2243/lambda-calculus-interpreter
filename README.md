@@ -46,7 +46,7 @@ $ ./lamb "let add = fn x => fn y => x + y in add 3 4"
 
 ## The Language
 
-The language is expression-oriented — every program is a single expression
+The language is expression-oriented, every program is a single expression
 that reduces to a value. There are no statements, no mutation, and no
 implicit sequencing. Computation happens entirely through function application
 and let bindings.
@@ -56,7 +56,7 @@ comparison operators, conditionals, anonymous functions (lambdas), function
 application, and let bindings for naming values. Functions are first-class
 values: they can be passed as arguments, returned from other functions, and
 stored in bindings. All functions take exactly one argument. Multi-argument
-functions are expressed through currying — a function that appears to take
+functions are expressed through currying. A function that appears to take
 two arguments is actually a function that takes one argument and returns
 another function that takes the second.
 
@@ -76,7 +76,7 @@ The formal grammar is defined in EBNF.md.
 let x = 10 in let y = 5 in x + y
 ```
 
-Evaluates to `15`. Let bindings are not variable assignments — they are
+Evaluates to `15`. Let bindings are not variable assignments. They are
 expressions that introduce a name into scope for the duration of their body.
 
 **Curried addition**
@@ -86,7 +86,7 @@ let add = fn x => fn y => x + y in add 3 4
 ```
 
 Evaluates to `7`. Multi-argument functions are just functions returning
-functions — currying is not syntactic sugar here, it is the actual evaluation
+functions. Currying is not syntactic sugar here, it is the actual evaluation
 model. The type inferencer infers `add : int -> int -> int` without any
 annotations.
 
@@ -109,7 +109,7 @@ has already finished executing. This is closure semantics in action.
 let abs = fn x => if x < 0 then 0 - x else x in abs (0 - 7)
 ```
 
-Evaluates to `7`. Conditionals are expressions, not statements — both
+Evaluates to `7`. Conditionals are expressions, not statements. Both
 branches must be present and both must produce values of the same type.
 The type inferencer enforces this: `if true then 1 else false` is a type
 error because the branches have incompatible types.
@@ -161,14 +161,14 @@ src/
 
 ## Tokenizer
 
-The tokenizer performs lexical analysis — converting raw source text into a
+The tokenizer performs lexical analysis. Converting raw source text into a
 flat sequence of typed tokens. It works character by character, recognizing
 integer literals, boolean keywords, identifiers, reserved words, operators,
 arrows, equals signs, and parentheses.
 
 The tokenizer is hand-written without regular expression libraries, scanning
 the source in a single pass. Multi-character tokens such as `=>`, `==`, `<=`,
-and `>=` require lookahead — the tokenizer cannot determine the correct token
+and `>=` require lookahead. the tokenizer cannot determine the correct token
 until it reads the second character. This is the standard NFA-based behavior
 described in compiler literature: the tokenizer follows all possible paths
 simultaneously until sufficient input resolves the ambiguity.
@@ -181,7 +181,7 @@ reserved word set after the full word has been scanned.
 
 ## Parser
 
-The parser performs syntactic analysis — consuming the token stream and
+The parser performs syntactic analysis; consuming the token stream and
 constructing an abstract syntax tree that represents the grammatical
 structure of the program.
 
@@ -216,7 +216,7 @@ which ensures that inner scopes can shadow outer bindings without affecting
 the outer scope after the inner scope exits.
 
 When a function application is evaluated, the body is evaluated in an
-extension of the closure's captured environment — not the caller's
+extension of the closure's captured environment; not the caller's
 environment. This is the invariant that makes lexical scoping correct.
 
 ---
@@ -244,21 +244,21 @@ its definition environment.
 Prior to evaluating the value expression, `letrec` seeds the local environment with a 
 placeholder for the binding name. The value expression is then evaluated in that environment, 
 producing a closure that captures it. The placeholder is patched with that closure before 
-the body is evaluated — ensuring that when the function recurses and looks up its own name, 
+the body is evaluated, ensuring that when the function recurses and looks up its own name, 
 it finds itself rather than an unbound variable.
 
 ---
 
 ## Type Inferencer
 
-The type inferencer implements Hindley-Milner type inference — the algorithm
+The type inferencer implements Hindley-Milner type inference, the algorithm
 underlying the type systems of ML, OCaml, and Haskell. It infers the type of
 every expression without requiring any type annotations from the programmer.
 
 ### Type system
 
 The language has three concrete types: `int`, `bool`, and function types
-written `T1 -> T2`. Function types can be nested — a curried two-argument
+written `T1 -> T2`. Function types can be nested, a curried two-argument
 function has type `int -> int -> int`. Type variables, written `'a`, `'b`,
 etc., represent unknown types during inference.
 
@@ -267,7 +267,7 @@ etc., represent unknown types during inference.
 Type inference runs in three passes over the AST after parsing and before
 evaluation.
 
-**Pass 1 — Constraint generation.** The inferencer walks the AST and collects
+**Pass 1 - Constraint generation.** The inferencer walks the AST and collects
 a list of type equality constraints. Each expression is assigned a type, which
 may be a fresh type variable if the type is not yet known. Rules for each
 expression form generate constraints:
@@ -281,15 +281,15 @@ expression form generate constraints:
 - Both branches of an `if` expression are constrained to the same type.
 - Function application constrains the function to have type `param_type -> return_type`.
 
-**Pass 2 — Unification.** The constraint list is solved. Unification processes
+**Pass 2 - Unification.** The constraint list is solved. Unification processes
 each constraint in order, building a substitution map from type variables to
 their resolved types. When a type variable is resolved, the substitution is
 applied to all remaining constraints immediately, so that later constraints
-benefit from earlier resolutions. If any constraint produces a contradiction —
-such as `int = bool` — unification raises a `LambTypeError` before any code
+benefit from earlier resolutions. If any constraint produces a contradiction,
+such as `int = bool`, unification raises a `LambTypeError` before any code
 executes.
 
-**Pass 3 — Substitution.** The substitution map is applied to the return type
+**Pass 3 - Substitution.** The substitution map is applied to the return type
 of the whole expression, replacing all remaining type variables with their
 resolved types. The final result is a concrete type for the program.
 
@@ -297,7 +297,7 @@ resolved types. The final result is a concrete type for the program.
 
 Before substituting a type variable `'a` with a type `T`, the inferencer
 checks whether `'a` appears anywhere inside `T`. If it does, the substitution
-would create an infinite type — for example, `'a = 'a -> int` — which has no
+would create an infinite type, for example, `'a = 'a -> int`, which has no
 finite representation. This check, called the occurs check, raises a
 `LambTypeError` for self-application expressions such as `fn x => x x`.
 
@@ -305,13 +305,13 @@ finite representation. This check, called the occurs check, raises a
 
 The language now supports recursive function definitions through the `letrec` keyword. 
 Standard `let` bindings cannot express recursion because the binding name is not in 
-scope when the value expression is evaluated — a function cannot reference itself during 
+scope when the value expression is evaluated. A function cannot reference itself during 
 its own definition.
 
 `letrec` solves this by introducing a fresh type variable for the binding name and adding 
-it to the type environment before walking the value expression. The recursive self-reference 
+it to the type environment before traversing the value expression. The recursive self-reference 
 unifies against that type variable during constraint generation. Unification then resolves 
-the variable to the function's concrete type without triggering the occurs check — which 
+the variable to the function's concrete type without triggering the occurs check which 
 would fire if the type variable appeared recursively inside its own resolved type rather 
 than as a resolvable constraint.
 
@@ -327,7 +327,7 @@ expressions will have. The evaluator computes what values they produce. A
 program only reaches the evaluator if it passes type checking.
 
 This separation also explains the treatment of self-application. The untyped
-evaluator can execute `fn x => x x` successfully — untyped lambda calculus
+evaluator can execute `fn x => x x` successfully. Untyped lambda calculus
 permits self-application, and the Y combinator relies on it. The type
 inferencer rejects it because `fn x => x x` requires `x` to simultaneously
 have type `'a` and type `'a -> 'b`, which the occurs check detects as an
@@ -375,8 +375,8 @@ let id = fn x => x in if id true then id 5 else id 1
 ```
 
 In the current type system, id is assigned a single type at its binding site. The first use id true pins 
-'a = bool, which causes id 5 to fail unification. Let-polymorphism generalizes the type at let bindings — 
-each use of id gets a fresh instantiation of 'a -> 'a — making the expression well-typed. This is the 
+'a = bool, which causes id 5 to fail unification. Let-polymorphism generalizes the type at let bindings, 
+each use of id gets a fresh instantiation of 'a -> 'a, making the expression well-typed. This is the 
 missing piece between the current constraint-based system and full Algorithm W.
 
 **Pattern matching**
@@ -416,7 +416,7 @@ LambTypeError at position 23-27:
 
 This project was built to demonstrate the core concepts from a graduate
 compiler construction course (CSCI 742) covering lexical analysis, parsing,
-type systems, semantics, and interpreters — originally implemented in Clojure,
+type systems, semantics, and interpreters. Originally implemented in Clojure,
 rebuilt here in Python.
 
 The language design is influenced by the ML family of languages, with syntax
